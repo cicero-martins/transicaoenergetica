@@ -1,4 +1,4 @@
-"""Atualiza dados/sr_brasil_mundo.csv a partir do Our World in Data.
+"""Atualiza dados/sr_paises.csv a partir do Our World in Data.
 
 O Our World in Data redistribui a Statistical Review of World Energy
 (Energy Institute). As participações usam o método de substituição.
@@ -14,9 +14,18 @@ import urllib.request
 from pathlib import Path
 
 URL = "https://raw.githubusercontent.com/owid/energy-data/master/owid-energy-data.csv"
-SAIDA = Path(__file__).resolve().parent.parent / "dados" / "sr_brasil_mundo.csv"
+SAIDA = Path(__file__).resolve().parent.parent / "dados" / "sr_paises.csv"
 
-REGIOES = {"Brazil": "Brasil", "World": "Mundo"}
+# Mundo e membros do G20 com dados (a União Africana não tem série própria)
+REGIOES = {
+    "World": "Mundo", "Brazil": "Brasil", "Argentina": "Argentina", "Australia": "Austrália",
+    "Canada": "Canadá", "China": "China", "France": "França", "Germany": "Alemanha",
+    "India": "Índia", "Indonesia": "Indonésia", "Italy": "Itália", "Japan": "Japão",
+    "Mexico": "México", "Russia": "Rússia", "Saudi Arabia": "Arábia Saudita",
+    "South Africa": "África do Sul", "South Korea": "Coreia do Sul", "Turkey": "Turquia",
+    "United Kingdom": "Reino Unido", "United States": "Estados Unidos",
+    "European Union (27)": "União Europeia",
+}
 COLUNAS = {
     "oil_share_energy": "petroleo",
     "gas_share_energy": "gas",

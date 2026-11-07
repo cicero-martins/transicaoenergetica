@@ -12,7 +12,7 @@ link, sem login.
 ```
 dados/
   ben_oie.csv            BEN: participação (%) de cada fonte na oferta interna, e total em Mtep
-  sr_brasil_mundo.csv    Statistical Review (via Our World in Data): Brasil e Mundo
+  sr_paises.csv          Statistical Review (via Our World in Data): Mundo e membros do G20
 modelo/
   index.html             modelo da página (texto, estilo e gráficos)
   vendor/d3.min.js       biblioteca de gráficos D3 (licença ISC)

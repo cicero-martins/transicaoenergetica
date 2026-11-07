@@ -32,7 +32,7 @@ def ler(nome):
 
 def main():
     ben = ler("ben_oie.csv")
-    sr = ler("sr_brasil_mundo.csv")
+    sr = ler("sr_paises.csv")
     for r in ben:
         r["ano"] = int(r["ano"])
     for r in sr:
