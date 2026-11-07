@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matriz energética brasileira</title>
+<meta name="description" content="Evolução da matriz energética brasileira de 1970 até hoje, com dados do Balanço Energético Nacional (EPE) e comparação internacional pela Statistical Review of World Energy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fbfaf7; --panel: #ffffff; --fg: #1f2328; --muted: #5f6670; --line: #e3e0d8;
+    --grid: #ece9e2; --axis: #b9b4a8; --ok: #1d7a46; --bad: #b3261e; --accent: #1d7a46;
+    --pop: #ffffff; --shadow: 0 6px 20px rgba(0,0,0,.12);
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181b; --panel: #1e2125; --fg: #e8e6e1; --muted: #a3a8b0; --line: #30343a;
+      --grid: #2a2e33; --axis: #4a4f57; --ok: #5cc98a; --bad: #f2867d; --accent: #5cc98a;
+      --pop: #24282d; --shadow: 0 6px 20px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 17px; line-height: 1.6; }
+  .wrap { max-width: 64rem; margin: 0 auto; padding: 2.5rem 16px 3rem; }
+  @media (min-width: 700px) { .wrap { padding: 3.5rem 32px 4rem; } }
+  .kicker { color: var(--muted); font-size: .85rem; letter-spacing: .02em; margin: 0 0 .5rem; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.9rem, 4.5vw, 2.8rem); line-height: 1.15; margin: 0 0 1rem; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 1.55rem; line-height: 1.25; margin: 3rem 0 1rem; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .2rem; line-height: 1.35; }
+  p { margin: 0 0 1rem; }
+  .lede { font-size: 1.12rem; max-width: 46rem; margin-bottom: 2rem; }
+  b, .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 12px; margin-bottom: 1rem; }
+  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .tile .lab { font-size: .85rem; color: var(--muted); margin: 0; line-height: 1.35; }
+  .tile .big { font-family: var(--serif); font-size: 2.1rem; line-height: 1.15; margin: .35rem 0 .25rem; font-variant-numeric: tabular-nums; }
+  .tile .sub { font-size: .85rem; color: var(--muted); margin: 0; }
+  .up { color: var(--ok); } .down { color: var(--bad); }
+  .card { margin-bottom: 16px; }
+  .card .note { font-size: .85rem; color: var(--muted); margin: 0 0 .75rem; }
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 16px 28px; align-items: start; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; padding: 0; margin: .75rem 0 0; font-size: .82rem; color: var(--muted); }
+  .legend li { display: flex; align-items: center; gap: 6px; line-height: 1.3; }
+  .legend .grp { color: var(--fg); font-weight: 600; }
+  .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; flex: none; }
+  .sw.line { height: 3px; width: 16px; }
+  .sw.dash { height: 0; width: 16px; border-top: 3px dashed; border-radius: 0; background: none !important; }
+  .tip { position: absolute; pointer-events: none; background: var(--pop); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 6px 10px; font-size: .8rem; line-height: 1.45; min-width: 9.5rem; z-index: 5; display: none; }
+  .tip .t { color: var(--muted); margin-bottom: 2px; }
+  .tip .r { display: flex; justify-content: space-between; gap: 12px; }
+  .tip .r span:first-child { display: flex; align-items: center; gap: 6px; }
+  .tick text, .lbl { fill: var(--muted); font-size: 11.5px; font-family: var(--sans); }
+  .lbl.strong { fill: var(--fg); font-weight: 600; }
+  .tick line { stroke: var(--grid); }
+  .domain { stroke: var(--axis); }
+  ul.facts { padding-left: 1.2rem; margin: 0 0 1rem; }
+  ul.facts li { margin-bottom: .55rem; }
+  .callout { border-left: 3px solid var(--accent); padding: .25rem 0 .25rem 1rem; margin: 1.25rem 0; color: var(--fg); }
+  details { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; }
+  dl { margin: 1rem 0 0; }
+  dt { font-weight: 600; margin-top: .9rem; }
+  dd { margin: .15rem 0 0; }
+  .src li { margin-bottom: .6rem; }
+  a { color: inherit; text-underline-offset: 2px; }
+  footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1rem; color: var(--muted); font-size: .85rem; }
+  noscript p { background: var(--panel); border: 1px solid var(--line); padding: 1rem; border-radius: 8px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header id="topo">
+    <p class="kicker">Transição Energética e Sociedade · material de apoio</p>
+    <h1>Matriz energética brasileira, <span data-v="ano_primeiro">1970</span>–<span data-v="ano_fim"></span></h1>
+    <p class="lede">Em <b data-v="ano_fim"></b>, <b data-v="ren_fim" data-f="pct"></b> da oferta interna de energia do Brasil veio de fontes renováveis, <b data-v="ren_d" data-f="pp"></b> em relação a <b data-v="ano_ini"></b>. Sem contar lenha e carvão vegetal, a participação renovável foi de <b data-v="sl_fim" data-f="pct"></b>, e foi essa parcela que mais cresceu: eólica, solar e biomassas modernas avançaram, enquanto petróleo e gás natural perderam espaço.</p>
+    <noscript><p>Esta página precisa de JavaScript para desenhar os gráficos. Os dados estão disponíveis em <a href="dados/ben_oie.csv">CSV</a>.</p></noscript>
+  </header>
+
+  <section class="tiles" aria-label="Destaques">
+    <div class="tile">
+      <p class="lab">Renováveis na oferta interna, <span data-v="ano_fim"></span></p>
+      <p class="big" data-v="ren_fim" data-f="pct"></p>
+      <p class="sub"><span data-v="ren_d" data-f="pp" data-good="up"></span> em dez anos</p>
+    </div>
+    <div class="tile">
+      <p class="lab">Renováveis sem lenha e carvão vegetal</p>
+      <p class="big" data-v="sl_fim" data-f="pct"></p>
+      <p class="sub"><span data-v="sl_d" data-f="pp" data-good="up"></span> em dez anos</p>
+    </div>
+    <div class="tile">
+      <p class="lab">Eólica + solar</p>
+      <p class="big" data-v="es_fim" data-f="pct"></p>
+      <p class="sub">eram <span data-v="es_ini" data-f="pct"></span> dez anos antes</p>
+    </div>
+    <div class="tile">
+      <p class="lab">Oferta interna total</p>
+      <p class="big" data-v="oie_fim" data-f="mtep"></p>
+      <p class="sub"><span data-v="oie_cresc" data-f="cresc"></span> em dez anos</p>
+    </div>
+  </section>
+
+  <section id="longo-prazo">
+    <h2>Meio século de transformação</h2>
+    <div class="card">
+      <h3>Participação de cada fonte na oferta interna de energia (%)</h3>
+      <p class="note">Renováveis na base, não renováveis no topo. Passe o cursor (ou toque) para ver os valores de cada ano.</p>
+      <div class="chart" id="g-area" role="img" aria-label="Gráfico de áreas com a participação de cada fonte na oferta interna de energia do Brasil desde 1970"></div>
+      <ul class="legend" id="leg-area"></ul>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h3>Participação das renováveis (%)</h3>
+        <p class="note">Total e sem lenha e carvão vegetal.</p>
+        <div class="chart" id="g-ren" role="img" aria-label="Linhas com a participação das renováveis, total e sem lenha"></div>
+        <ul class="legend">
+          <li><span class="sw line" style="background:#2e9b5b"></span>Renováveis (total)</li>
+          <li><span class="sw dash" style="border-color:#2e9b5b"></span>Sem lenha e carvão vegetal</li>
+        </ul>
+      </div>
+      <div>
+        <p>Em <b data-v="ano_primeiro"></b>, a lenha respondia sozinha por <b data-v="lenha_primeiro" data-f="pct"></b> da oferta e as renováveis somavam <b data-v="ren_primeiro" data-f="pct"></b>. Com a urbanização e a industrialização, a lenha foi substituída por derivados de petróleo, e a participação renovável caiu até o mínimo de <b data-v="min_ren" data-f="pct"></b> em <b data-v="min_ano"></b>, ano do racionamento de energia elétrica.</p>
+        <p>A linha tracejada conta outra história. Sem lenha e carvão vegetal, as renováveis passaram de <b data-v="sl_primeiro" data-f="pct"></b> para <b data-v="sl_fim" data-f="pct"></b>: hidreletricidade, etanol e bagaço de cana e, mais recentemente, eólica e solar cresceram de forma quase contínua. O total voltou a cerca de metade da matriz, mas com uma composição muito diferente da de <span data-v="ano_primeiro"></span>, numa oferta <b data-v="oie_mult" data-f="mult"></b> maior.</p>
+        <p class="callout"><b>Por que separar a lenha?</b> Ela reúne usos muito diferentes: a cocção em residências, a chamada biomassa tradicional, associada à poluição dentro de casa e, onde não há manejo, ao desmatamento; e usos industriais, como o carvão vegetal da siderurgia e a lenha de cerâmicas e da indústria de alimentos. O BEN não separa esses usos na tabela agregada, então a série sem lenha é uma aproximação conservadora das renováveis modernas.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="ultima-decada">
+    <h2>A última década</h2>
+    <div class="two">
+      <div class="card">
+        <h3>Variação da participação na oferta interna (pontos percentuais)</h3>
+        <p class="note">De <span data-v="ano_ini"></span> a <span data-v="ano_fim"></span>, por fonte.</p>
+        <div class="chart" id="g-var" role="img" aria-label="Barras com a variação da participação de cada fonte em dez anos"></div>
+      </div>
+      <div>
+        <p>A participação renovável passou de <b data-v="ren_ini" data-f="pct"></b> para <b data-v="ren_fim" data-f="pct"></b>, com pico de <b data-v="ren_max" data-f="pct"></b> em <b data-v="ren_max_ano"></b>. Por fonte:</p>
+        <ul class="facts">
+          <li><b>Eólica e solar</b> saíram da margem: eólica de <b data-v="ini.eolica" data-f="pct"></b> para <b data-v="fim.eolica" data-f="pct"></b>, solar de <b data-v="ini.solar" data-f="pct"></b> para <b data-v="fim.solar" data-f="pct"></b>. Juntas, já superam o carvão mineral (<b data-v="fim.carvao" data-f="pct"></b>).</li>
+          <li><b>Outras renováveis</b> (sobretudo lixívia, biodiesel, biogás e outras biomassas) tiveram o maior ganho: de <b data-v="ini.outras_ren" data-f="pct"></b> para <b data-v="fim.outras_ren" data-f="pct"></b>.</li>
+          <li><b>Hidráulica</b> oscila com o regime de chuvas, como na crise hídrica de 2021, e perde espaço relativo para eólica e solar na geração elétrica: <b data-v="ini.hidraulica" data-f="pct"></b> → <b data-v="fim.hidraulica" data-f="pct"></b>.</li>
+          <li><b>Derivados da cana</b> variam com as safras e o mercado de etanol: <b data-v="ini.cana" data-f="pct"></b> → <b data-v="fim.cana" data-f="pct"></b>.</li>
+          <li><b>Fósseis</b>: petróleo e derivados de <b data-v="ini.petroleo" data-f="pct"></b> para <b data-v="fim.petroleo" data-f="pct"></b>; gás natural de <b data-v="ini.gas" data-f="pct"></b> para <b data-v="fim.gas" data-f="pct"></b>. O ponto de partida do gás era alto porque as térmicas foram muito acionadas na seca de 2014–2015.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="mundo">
+    <h2>O Brasil no contexto mundial</h2>
+    <p>Nas comparações internacionais, a referência mais usada é a <i>Statistical Review of World Energy</i>, do Energy Institute. Por ela, em <b data-v="ano_c"></b>, os combustíveis fósseis responderam por <b data-v="mundo_fossil" data-f="pct"></b> da energia primária mundial e as renováveis por <b data-v="mundo_ren" data-f="pct"></b>. No Brasil, as renováveis somaram <b data-v="br_sr_ren" data-f="pct"></b>, cerca de <b data-v="razao" data-f="mult"></b> a média mundial.</p>
+    <div class="card">
+      <h3>Composição da energia primária em <span data-v="ano_c"></span> (%)</h3>
+      <p class="note">As duas barras do Brasil mostram o mesmo país e o mesmo ano, contabilizados de duas formas.</p>
+      <div class="chart" id="g-barras" role="img" aria-label="Barras empilhadas comparando a composição da energia primária do mundo e do Brasil"></div>
+      <ul class="legend" id="leg-barras"></ul>
+    </div>
+    <div class="two">
+      <div>
+        <p>O total renovável do Brasil é parecido nas duas bases (<b data-v="br_sr_ren" data-f="pct"></b> e <b data-v="br_ben_ren" data-f="pct"></b>), mas a composição não. A diferença vem de duas escolhas de contabilidade:</p>
+        <ul class="facts">
+          <li><b>Eletricidade de hidráulica, eólica e solar.</b> O BEN a converte pelo equivalente térmico teórico (1 kWh = 860 kcal). A <i>Statistical Review</i> usa o método de substituição: conta quanto combustível uma termelétrica gastaria para produzir a mesma eletricidade. Como uma térmica converte em eletricidade só cerca de 40% do calor do combustível (o resto é rejeitado, como manda a termodinâmica), esse método multiplica o peso dessas fontes por cerca de 2,5. Por isso a hidráulica aparece com <b data-v="hid_ben" data-f="pct"></b> no BEN e <b data-v="hid_sr" data-f="pct"></b> na <i>Statistical Review</i>.</li>
+          <li><b>Biomassa.</b> O BEN inclui lenha, carvão vegetal e bagaço usados para gerar calor. A <i>Statistical Review</i> conta biocombustíveis e a biomassa usada para gerar eletricidade, e deixa de fora boa parte do uso térmico da biomassa.</li>
+        </ul>
+        <p class="callout">Regra prática: para a matriz brasileira e as políticas nacionais, use o BEN, que é a referência oficial. Para comparar países, use uma única base internacional, sem misturar números das duas.</p>
+      </div>
+      <div class="card">
+        <h3>Hidráulica no Brasil, conforme o método (%)</h3>
+        <p class="note">Mesma fonte, mesmo país: muda só a contabilidade.</p>
+        <div class="chart" id="g-hidro" role="img" aria-label="Linhas com a participação da hidráulica no Brasil pelo BEN e pela Statistical Review"></div>
+        <ul class="legend">
+          <li><span class="sw line" style="background:#2f7fc1"></span>BEN (EPE): equivalente térmico</li>
+          <li><span class="sw line" style="background:#d0893f"></span><i>Statistical Review</i>: substituição</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <details id="notas">
+    <summary>Fontes, definições e como citar</summary>
+    <dl>
+      <dt>Oferta interna de energia (OIE)</dt>
+      <dd>Toda a energia disponibilizada no país para transformação ou consumo final: produção + importação − exportação ± variação de estoques − energia não aproveitada. É o que o BEN chama de “matriz energética”.</dd>
+      <dt>tep</dt>
+      <dd>Tonelada equivalente de petróleo (10 000 Mcal, cerca de 41,9 GJ). Mtep = milhão de tep.</dd>
+      <dt>Outras renováveis (BEN)</dt>
+      <dd>Lixívia, biodiesel, biogás, outras biomassas e demais fontes renováveis que o BEN não detalha na tabela agregada.</dd>
+      <dt>Biomassa moderna e outras renováveis (gráfico de barras)</dt>
+      <dd>No BEN, derivados da cana e outras renováveis. Na <i>Statistical Review</i>, biocombustíveis e outras renováveis (biomassa para eletricidade, geotérmica e demais).</dd>
+      <dt>Arredondamento</dt>
+      <dd>As participações do BEN foram calculadas a partir dos valores em mil tep e arredondadas a uma casa decimal; as somas podem diferir de 100% em até 0,2 ponto.</dd>
+    </dl>
+    <p style="margin-top:1.25rem"><b>Dados usados nesta página</b></p>
+    <ul class="src">
+      <li>EPE – Empresa de Pesquisa Energética. <i>Balanço Energético Nacional 2026: ano-base 2025</i>. Séries Históricas Completas, Capítulo 1, Tabela 1.3.a (Evolução da oferta interna de energia). <a href="https://www.epe.gov.br/pt/publicacoes-dados-abertos/publicacoes/BEN-Series-Historicas-Completas">epe.gov.br</a> · <a href="dados/ben_oie.csv" download>baixar CSV</a></li>
+      <li>Energy Institute. <i>Statistical Review of World Energy</i>, via Our World in Data (energy-data, participações pelo método de substituição). <a href="https://ourworldindata.org/energy/country/brazil">ourworldindata.org</a> · <a href="https://www.energyinst.org/statistical-review">energyinst.org</a> · <a href="dados/sr_brasil_mundo.csv" download>baixar CSV</a></li>
+    </ul>
+    <p><b>Como citar os dados do BEN</b><br>EMPRESA DE PESQUISA ENERGÉTICA (EPE). <i>Balanço Energético Nacional 2026: ano base 2025</i>. Rio de Janeiro: EPE, 2026. Séries Históricas Completas, Capítulo 1.</p>
+  </details>
+
+  <footer>
+    <p>Elaborado por Cicero Martins Jr. para a disciplina Transição Energética e Sociedade (PUC-PR Digital). Dados atualizados em <span data-v="gerado"></span>. Gráficos feitos com <a href="https://d3js.org">D3.js</a> (licença ISC).</p>
+  </footer>
+</main>
+
+<script src="vendor/d3.min.js"></script>
+<script>
+(function () {
+  const DADOS = /*__DADOS__*/null;
+  if (!DADOS || !window.d3) return;
+
+  // ---------- dados e resumo ----------
+  const ben = DADOS.ben.slice().sort((a, b) => a.ano - b.ano);
+  const sr = DADOS.sr;
+  const fim = d3.max(ben, (r) => r.ano), ini = fim - 10, primeiro = d3.min(ben, (r) => r.ano);
+  const byAno = new Map(ben.map((r) => [r.ano, r]));
+  const F = byAno.get(fim), I = byAno.get(ini), P = byAno.get(primeiro);
+  ben.forEach((r) => { r.sem_lenha = Math.round((r.renovavel - r.lenha) * 10) / 10; });
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const minR = ben.reduce((a, r) => (r.renovavel < a.renovavel ? r : a));
+  const maxR = ben.filter((r) => r.ano >= ini).reduce((a, r) => (r.renovavel > a.renovavel ? r : a));
+
+  const srBr = sr.filter((r) => r.regiao === 'Brasil').sort((a, b) => a.ano - b.ano);
+  const srMu = sr.filter((r) => r.regiao === 'Mundo').sort((a, b) => a.ano - b.ano);
+  const anoC = Math.min(fim, d3.max(srBr, (r) => r.ano), d3.max(srMu, (r) => r.ano));
+  const C_br = srBr.find((r) => r.ano === anoC), C_mu = srMu.find((r) => r.ano === anoC), C_ben = byAno.get(anoC);
+  const renSR = (r) => r.hidraulica + r.eolica + r.solar + r.biocombustivel + r.outras_ren;
+  const fosSR = (r) => r.petroleo + r.gas + r.carvao;
+
+  const V = {
+    ano_fim: fim, ano_ini: ini, ano_primeiro: primeiro, ano_c: anoC, gerado: DADOS.gerado,
+    ren_fim: F.renovavel, ren_ini: I.renovavel, ren_d: r1(F.renovavel - I.renovavel),
+    sl_fim: F.sem_lenha, sl_d: r1(F.sem_lenha - I.sem_lenha), sl_primeiro: P.sem_lenha,
+    es_fim: r1(F.eolica + F.solar), es_ini: r1(I.eolica + I.solar),
+    oie_fim: F.total_mtep, oie_cresc: F.total_mtep / I.total_mtep - 1, oie_mult: F.total_mtep / P.total_mtep,
+    ren_primeiro: P.renovavel, lenha_primeiro: P.lenha,
+    min_ren: minR.renovavel, min_ano: minR.ano, ren_max: maxR.renovavel, ren_max_ano: maxR.ano,
+    mundo_fossil: r1(fosSR(C_mu)), mundo_ren: r1(renSR(C_mu)), br_sr_ren: r1(renSR(C_br)), br_ben_ren: C_ben.renovavel,
+    razao: renSR(C_br) / renSR(C_mu), hid_ben: C_ben.hidraulica, hid_sr: r1(C_br.hidraulica),
+  };
+  ['eolica', 'solar', 'carvao', 'outras_ren', 'hidraulica', 'cana', 'petroleo', 'gas'].forEach((k) => { V['ini.' + k] = I[k]; V['fim.' + k] = F[k]; });
+
+  const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+  const FMT = {
+    pct: (v) => nf1.format(v) + '%',
+    pp: (v) => (v > 0 ? '+' : v < 0 ? '−' : '±') + nf1.format(Math.abs(v)) + ' p.p.',
+    mtep: (v) => nf0.format(v) + ' Mtep',
+    cresc: (v) => (v >= 0 ? '+' : '−') + nf0.format(Math.abs(v * 100)) + '%',
+    mult: (v) => nf1.format(v) + ' vezes',
+  };
+  document.querySelectorAll('[data-v]').forEach((el) => {
+    const v = V[el.dataset.v];
+    if (v === undefined || v === null) return;
+    el.textContent = el.dataset.f ? FMT[el.dataset.f](v) : String(v);
+    if (el.dataset.good) {
+      const good = el.dataset.good === 'up' ? v > 0 : v < 0;
+      el.classList.add(good ? 'up' : 'down');
+    }
+  });
+  d3.formatDefaultLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['R$', ''] });
+
+  // ---------- cores e nomes ----------
+  const COR = { hidraulica: '#2f7fc1', lenha: '#8a9a3b', cana: '#2e9b5b', eolica: '#3bb3c3', solar: '#e6b422', outras_ren: '#9cc76c',
+    petroleo: '#7b5137', gas: '#d0893f', carvao: '#666a70', uranio: '#a65ea0', outras_nr: '#b0aaa2', bio_moderna: '#2e9b5b', nuclear: '#a65ea0' };
+  const NOME = { hidraulica: 'Hidráulica', lenha: 'Lenha e carvão vegetal', cana: 'Derivados da cana', eolica: 'Eólica', solar: 'Solar', outras_ren: 'Outras renováveis',
+    petroleo: 'Petróleo e derivados', gas: 'Gás natural', carvao: 'Carvão mineral', uranio: 'Urânio', outras_nr: 'Outras não renováveis',
+    bio_moderna: 'Biomassa moderna e outras renováveis', nuclear: 'Nuclear' };
+  const ORDEM = ['hidraulica', 'lenha', 'cana', 'eolica', 'solar', 'outras_ren', 'petroleo', 'gas', 'carvao', 'uranio', 'outras_nr'];
+
+  function legenda(id, grupos) {
+    const ul = document.getElementById(id);
+    ul.replaceChildren();
+    grupos.forEach(([titulo, chaves]) => {
+      if (titulo) { const li = document.createElement('li'); li.className = 'grp'; li.textContent = titulo; ul.appendChild(li); }
+      chaves.forEach((k) => {
+        const li = document.createElement('li'); const s = document.createElement('span');
+        s.className = 'sw'; s.style.background = COR[k]; li.append(s, document.createTextNode(NOME[k])); ul.appendChild(li);
+      });
+    });
+  }
+  legenda('leg-area', [['Renováveis:', ORDEM.slice(0, 6)], ['Não renováveis:', ORDEM.slice(6)]]);
+
+  // ---------- utilitários de gráfico ----------
+  function base(el, H, m) {
+    el.replaceChildren();
+    const W = Math.max(280, el.clientWidth);
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H);
+    const tip = document.createElement('div'); tip.className = 'tip'; el.appendChild(tip);
+    return { W, svg, tip, m };
+  }
+  function eixos(svg, x, y, W, H, m, fmtY, nx) {
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).ticks(nx).tickFormat(d3.format('d')).tickSizeOuter(0))
+      .attr('font-size', null).attr('font-family', null);
+    svg.append('g').attr('transform', `translate(${m.l},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickFormat(fmtY).tickSize(-(W - m.l - m.r)))
+      .attr('font-size', null).attr('font-family', null)
+      .call((g) => g.select('.domain').remove());
+  }
+  function mostra(el, tip, ev) {
+    const rect = el.getBoundingClientRect();
+    const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = x + 14; if (left + tw > el.clientWidth) left = x - tw - 14;
+    let top = y - th / 2; top = Math.max(0, Math.min(top, el.clientHeight - th));
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = top + 'px';
+  }
+  function linhaTip(tip, cor, nome, valor, tracejado) {
+    const d = document.createElement('div'); d.className = 'r';
+    const a = document.createElement('span');
+    if (cor) { const s = document.createElement('span'); s.className = 'sw' + (tracejado ? ' dash' : ''); if (tracejado) s.style.borderColor = cor; else s.style.background = cor; a.appendChild(s); }
+    a.appendChild(document.createTextNode(nome));
+    const b = document.createElement('span'); b.textContent = valor; d.append(a, b); tip.appendChild(d);
+  }
+  function titulo(tip, txt) { tip.replaceChildren(); const t = document.createElement('div'); t.className = 't'; t.textContent = txt; tip.appendChild(t); }
+  const pctTick = (d) => d + '%';
+  const nTicks = (W) => Math.max(3, Math.min(10, Math.floor(W / 75)));
+
+  // ---------- 1. áreas empilhadas ----------
+  function gArea() {
+    const el = document.getElementById('g-area');
+    const H = el.clientWidth < 500 ? 280 : 340, m = { t: 8, r: 10, b: 26, l: 40 };
+    const { W, svg, tip } = base(el, H, m);
+    const x = d3.scaleLinear(d3.extent(ben, (r) => r.ano), [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, 100], [H - m.b, m.t]);
+    eixos(svg, x, y, W, H, m, pctTick, nTicks(W));
+    const pilha = d3.stack().keys(ORDEM)(ben);
+    svg.append('g').selectAll('path').data(pilha).join('path')
+      .attr('d', d3.area().x((d) => x(d.data.ano)).y0((d) => y(d[0])).y1((d) => y(d[1])))
+      .attr('fill', (s) => COR[s.key]);
+    const regua = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--fg)').attr('opacity', 0);
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const ano = Math.round(x.invert(d3.pointer(ev)[0])); const r = byAno.get(ano); if (!r) return;
+        regua.attr('x1', x(ano)).attr('x2', x(ano)).attr('opacity', 0.45);
+        titulo(tip, ano + ' · ' + FMT.mtep(r.total_mtep));
+        ORDEM.slice().reverse().forEach((k) => { if (r[k] >= 0.05) linhaTip(tip, COR[k], NOME[k], FMT.pct(r[k])); });
+        mostra(el, tip, ev);
+      })
+      .on('pointerleave', () => { tip.style.display = 'none'; regua.attr('opacity', 0); });
+  }
+
+  // ---------- 2. renováveis: total e sem lenha ----------
+  function gRen() {
+    const el = document.getElementById('g-ren');
+    const H = 300, m = { t: 16, r: 48, b: 26, l: 40 };
+    const { W, svg, tip } = base(el, H, m);
+    const x = d3.scaleLinear(d3.extent(ben, (r) => r.ano), [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, 70], [H - m.b, m.t]);
+    eixos(svg, x, y, W, H, m, pctTick, Math.min(6, nTicks(W)));
+    const cor = '#2e9b5b';
+    const series = [{ k: 'renovavel', dash: null, nome: 'Renováveis (total)' }, { k: 'sem_lenha', dash: '6 5', nome: 'Sem lenha e carvão vegetal' }];
+    series.forEach((s) => svg.append('path').datum(ben).attr('fill', 'none').attr('stroke', cor).attr('stroke-width', 2.2)
+      .attr('stroke-dasharray', s.dash).attr('stroke-linejoin', 'round').attr('stroke-linecap', s.dash ? 'butt' : 'round')
+      .attr('d', d3.line().x((d) => x(d.ano)).y((d) => y(d[s.k]))));
+    const marcas = [
+      { ano: primeiro, v: P.renovavel, a: 'start', dy: -9 },
+      { ano: minR.ano, v: minR.renovavel, a: 'middle', dy: 18 },
+      { ano: fim, v: F.renovavel, a: 'start', dy: 4, dx: 7 },
+      { ano: primeiro, v: P.sem_lenha, a: 'start', dy: 18 },
+      { ano: fim, v: F.sem_lenha, a: 'start', dy: 4, dx: 7 },
+    ];
+    marcas.forEach((k) => {
+      svg.append('circle').attr('cx', x(k.ano)).attr('cy', y(k.v)).attr('r', 3.2).attr('fill', cor);
+      svg.append('text').attr('class', 'lbl strong').attr('x', x(k.ano) + (k.dx || 0)).attr('y', y(k.v) + k.dy).attr('text-anchor', k.a).text(FMT.pct(k.v));
+    });
+    const pts = series.map(() => svg.append('circle').attr('r', 4).attr('fill', 'var(--panel)').attr('stroke', cor).attr('stroke-width', 2).attr('opacity', 0));
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const r = byAno.get(Math.round(x.invert(d3.pointer(ev)[0]))); if (!r) return;
+        titulo(tip, String(r.ano));
+        series.forEach((s, i) => { pts[i].attr('cx', x(r.ano)).attr('cy', y(r[s.k])).attr('opacity', 1); linhaTip(tip, cor, s.nome, FMT.pct(r[s.k]), !!s.dash); });
+        mostra(el, tip, ev);
+      })
+      .on('pointerleave', () => { tip.style.display = 'none'; pts.forEach((p) => p.attr('opacity', 0)); });
+  }
+
+  // ---------- 3. variação em dez anos ----------
+  function gVar() {
+    const el = document.getElementById('g-var');
+    const fontes = ['petroleo', 'gas', 'carvao', 'uranio', 'outras_nr', 'hidraulica', 'lenha', 'cana', 'eolica', 'solar', 'outras_ren'];
+    const rows = fontes.map((f) => ({ f, ini: I[f], fim: F[f], d: r1(F[f] - I[f]) })).sort((a, b) => b.d - a.d);
+    const bh = 20, gap = 7, H = rows.length * (bh + gap) + 6;
+    const { W, svg, tip } = base(el, H, {});
+    const probe = svg.append('text').attr('class', 'lbl');
+    const labW = d3.max(rows, (r) => probe.text(NOME[r.f]).node().getComputedTextLength()) + 10;
+    const valW = d3.max(rows, (r) => probe.text(FMT.pp(r.d)).node().getComputedTextLength()) + 8;
+    probe.remove();
+    const ext = d3.max(rows, (r) => Math.abs(r.d)) || 1;
+    const x = d3.scaleLinear([-ext, ext], [labW + valW, W - valW]);
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 0).attr('y2', H).attr('stroke', 'var(--axis)');
+    rows.forEach((r, i) => {
+      const yy = 3 + i * (bh + gap);
+      svg.append('text').attr('class', 'lbl').attr('x', 0).attr('y', yy + bh / 2).attr('dy', '0.35em').text(NOME[r.f]);
+      svg.append('rect').attr('x', x(Math.min(0, r.d))).attr('y', yy).attr('width', Math.max(1, Math.abs(x(r.d) - x(0)))).attr('height', bh).attr('rx', 3).attr('fill', COR[r.f])
+        .on('pointermove', (ev) => { titulo(tip, NOME[r.f]); linhaTip(tip, null, ini + ' → ' + fim, FMT.pct(r.ini) + ' → ' + FMT.pct(r.fim)); linhaTip(tip, null, 'Variação', FMT.pp(r.d)); mostra(el, tip, ev); })
+        .on('pointerleave', () => { tip.style.display = 'none'; });
+      svg.append('text').attr('class', 'lbl strong').attr('x', r.d >= 0 ? x(r.d) + 5 : x(r.d) - 5).attr('y', yy + bh / 2).attr('dy', '0.35em')
+        .attr('text-anchor', r.d >= 0 ? 'start' : 'end').text(FMT.pp(r.d));
+    });
+  }
+
+  // ---------- 4. barras 100%: mundo e Brasil ----------
+  const CAT = ['hidraulica', 'eolica', 'solar', 'bio_moderna', 'lenha', 'nuclear', 'petroleo', 'gas', 'carvao', 'outras_nr'];
+  legenda('leg-barras', [['Renováveis:', CAT.slice(0, 5)], ['Não renováveis:', CAT.slice(5)]]);
+  function gBarras() {
+    const el = document.getElementById('g-barras');
+    const linhas = [
+      { nome: 'Mundo', sub: 'Statistical Review', v: { hidraulica: C_mu.hidraulica, eolica: C_mu.eolica, solar: C_mu.solar, bio_moderna: C_mu.biocombustivel + C_mu.outras_ren, lenha: 0, nuclear: C_mu.nuclear, petroleo: C_mu.petroleo, gas: C_mu.gas, carvao: C_mu.carvao, outras_nr: 0 } },
+      { nome: 'Brasil', sub: 'Statistical Review', v: { hidraulica: C_br.hidraulica, eolica: C_br.eolica, solar: C_br.solar, bio_moderna: C_br.biocombustivel + C_br.outras_ren, lenha: 0, nuclear: C_br.nuclear, petroleo: C_br.petroleo, gas: C_br.gas, carvao: C_br.carvao, outras_nr: 0 } },
+      { nome: 'Brasil', sub: 'BEN (EPE)', v: { hidraulica: C_ben.hidraulica, eolica: C_ben.eolica, solar: C_ben.solar, bio_moderna: C_ben.cana + C_ben.outras_ren, lenha: C_ben.lenha, nuclear: C_ben.uranio, petroleo: C_ben.petroleo, gas: C_ben.gas, carvao: C_ben.carvao, outras_nr: C_ben.outras_nr } },
+    ];
+    const estreito = el.clientWidth < 560;
+    const bh = 34, gap = estreito ? 44 : 22, top = 4;
+    const H = top + linhas.length * (bh + gap);
+    const { W, svg, tip } = base(el, H, {});
+    const labW = estreito ? 0 : 150;
+    linhas.forEach((ln, i) => {
+      const tot = d3.sum(CAT, (k) => ln.v[k]);
+      const yy = top + i * (bh + gap) + (estreito ? 18 : 0);
+      const x = d3.scaleLinear([0, tot], [labW, W]);
+      if (estreito) {
+        svg.append('text').attr('class', 'lbl strong').attr('x', 0).attr('y', yy - 6).text(ln.nome).append('tspan').attr('class', 'lbl').text(' · ' + ln.sub);
+      } else {
+        svg.append('text').attr('class', 'lbl strong').attr('x', 0).attr('y', yy + bh / 2 - 6).attr('dy', '0.35em').text(ln.nome);
+        svg.append('text').attr('class', 'lbl').attr('x', 0).attr('y', yy + bh / 2 + 9).attr('dy', '0.35em').text(ln.sub);
+      }
+      let acc = 0;
+      const renov = ['hidraulica', 'eolica', 'solar', 'bio_moderna', 'lenha'];
+      CAT.forEach((k) => {
+        const v = ln.v[k]; if (!v) return;
+        const x0 = x(acc), w = x(acc + v) - x0; acc += v;
+        svg.append('rect').attr('x', x0).attr('y', yy).attr('width', Math.max(0, w - 1)).attr('height', bh).attr('fill', COR[k])
+          .on('pointermove', (ev) => {
+            titulo(tip, ln.nome + ' · ' + ln.sub + ' · ' + anoC);
+            linhaTip(tip, COR[k], NOME[k], FMT.pct(v));
+            linhaTip(tip, null, 'Renováveis (total)', FMT.pct(d3.sum(renov, (q) => ln.v[q])));
+            mostra(el, tip, ev);
+          })
+          .on('pointerleave', () => { tip.style.display = 'none'; });
+        if (w > 38) svg.append('text').attr('x', x0 + w / 2).attr('y', yy + bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+          .attr('fill', k === 'solar' ? '#1f2328' : '#ffffff').attr('font-size', 11).attr('font-family', 'var(--sans)').attr('pointer-events', 'none').text(nf0.format(v) + '%');
+      });
+    });
+  }
+
+  // ---------- 5. hidráulica: dois métodos ----------
+  function gHidro() {
+    const el = document.getElementById('g-hidro');
+    const H = 300, m = { t: 14, r: 14, b: 26, l: 40 };
+    const { W, svg, tip } = base(el, H, m);
+    const x = d3.scaleLinear([primeiro, fim], [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, 45], [H - m.b, m.t]);
+    eixos(svg, x, y, W, H, m, pctTick, Math.min(6, nTicks(W)));
+    const series = [{ rows: ben, cor: '#2f7fc1', nome: 'BEN' }, { rows: srBr, cor: '#d0893f', nome: 'Statistical Review' }];
+    series.forEach((s) => svg.append('path').datum(s.rows).attr('fill', 'none').attr('stroke', s.cor).attr('stroke-width', 2.2)
+      .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x((d) => x(d.ano)).y((d) => y(d.hidraulica))));
+    const pts = series.map((s) => svg.append('circle').attr('r', 4).attr('fill', 'var(--panel)').attr('stroke', s.cor).attr('stroke-width', 2).attr('opacity', 0));
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const ano = Math.round(x.invert(d3.pointer(ev)[0]));
+        titulo(tip, String(ano));
+        series.forEach((s, i) => {
+          const r = s.rows.find((d) => d.ano === ano);
+          if (!r) { pts[i].attr('opacity', 0); return; }
+          pts[i].attr('cx', x(ano)).attr('cy', y(r.hidraulica)).attr('opacity', 1);
+          linhaTip(tip, s.cor, s.nome, FMT.pct(r.hidraulica));
+        });
+        mostra(el, tip, ev);
+      })
+      .on('pointerleave', () => { tip.style.display = 'none'; pts.forEach((p) => p.attr('opacity', 0)); });
+  }
+
+  function desenha() { gArea(); gRen(); gVar(); gBarras(); gHidro(); }
+  desenha();
+  let ultimaLargura = document.querySelector('main').clientWidth, timer;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { const w = document.querySelector('main').clientWidth; if (w !== ultimaLargura) { ultimaLargura = w; desenha(); } }, 150);
+  });
+})();
+</script>
+</body>
+</html>
